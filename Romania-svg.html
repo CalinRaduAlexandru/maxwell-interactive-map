@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="ro">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Maxwell Romania Map</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        background: #f6f7fb;
+        font-family: "Inter", sans-serif;
+      }
+
+      .ro-map-wrapper {
+        max-width: 1100px;
+        margin: 0 auto;
+        position: relative;
+        padding: 8px;
+        box-sizing: border-box;
+      }
+
+      #roMap {
+        width: 100%;
+        height: auto;
+        display: block;
+      }
+
+      .county {
+        fill: #fffef6;
+        stroke: #1f2937;
+        stroke-width: 1;
+        transition: 0.25s ease;
+        cursor: pointer;
+      }
+
+      .county:hover {
+        fill: #c7e0ff;
+      }
+
+      .ro-tooltip {
+        position: absolute;
+        background: #ffffff;
+        padding: 14px 18px;
+        border-radius: 12px;
+        box-shadow: 0 20px 45px rgba(0, 0, 0, 0.18);
+        font-size: 14px;
+        line-height: 1.4;
+        display: none;
+        z-index: 9999;
+        pointer-events: none;
+        white-space: nowrap;
+      }
+
+      .ro-error {
+        margin: 18px auto;
+        max-width: 860px;
+        padding: 12px 14px;
+        border-radius: 10px;
+        border: 1px solid #d1d5db;
+        background: #fff;
+        color: #334155;
+        font-size: 14px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="ro-map-wrapper" id="map-wrapper"></div>
+    <div id="tooltip" class="ro-tooltip"></div>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", async function () {
+        const wrapper = document.getElementById("map-wrapper");
+
+        try {
+          const response = await fetch("romania-counties.svg", { cache: "no-store" });
+          if (!response.ok) throw new Error("Missing romania-counties.svg");
+          const svgText = await response.text();
+          wrapper.innerHTML = svgText;
+        } catch (error) {
+          wrapper.innerHTML =
+            '<div class="ro-error">Nu am găsit fișierul <code>romania-counties.svg</code>. Pune SVG-ul României (cu id-uri de forma <code>ROAB</code>, <code>ROTM</code> etc.) în acest fișier.</div>';
+          return;
+        }
+
+        const evpCountyStats = window.evpCountyStats || {};
+        const countiesData = {
+          AB: { name: "Alba", code: "AB" },
+          AR: { name: "Arad", code: "AR" },
+          AG: { name: "Argeș", code: "AG" },
+          BC: { name: "Bacău", code: "BC" },
+          BH: { name: "Bihor", code: "BH" },
+          BN: { name: "Bistrița-Năsăud", code: "BN" },
+          BT: { name: "Botoșani", code: "BT" },
+          BR: { name: "Brăila", code: "BR" },
+          BV: { name: "Brașov", code: "BV" },
+          B: { name: "București", code: "B" },
+          BZ: { name: "Buzău", code: "BZ" },
+          CL: { name: "Călărași", code: "CL" },
+          CS: { name: "Caraș-Severin", code: "CS" },
+          CJ: { name: "Cluj", code: "CJ" },
+          CT: { name: "Constanța", code: "CT" },
+          CV: { name: "Covasna", code: "CV" },
+          DB: { name: "Dâmbovița", code: "DB" },
+          DJ: { name: "Dolj", code: "DJ" },
+          GL: { name: "Galați", code: "GL" },
+          GR: { name: "Giurgiu", code: "GR" },
+          GJ: { name: "Gorj", code: "GJ" },
+          HR: { name: "Harghita", code: "HR" },
+          HD: { name: "Hunedoara", code: "HD" },
+          IL: { name: "Ialomița", code: "IL" },
+          IS: { name: "Iași", code: "IS" },
+          IF: { name: "Ilfov", code: "IF" },
+          MM: { name: "Maramureș", code: "MM" },
+          MH: { name: "Mehedinți", code: "MH" },
+          MS: { name: "Mureș", code: "MS" },
+          NT: { name: "Neamț", code: "NT" },
+          OT: { name: "Olt", code: "OT" },
+          PH: { name: "Prahova", code: "PH" },
+          SJ: { name: "Sălaj", code: "SJ" },
+          SM: { name: "Satu Mare", code: "SM" },
+          SB: { name: "Sibiu", code: "SB" },
+          SV: { name: "Suceava", code: "SV" },
+          TR: { name: "Teleorman", code: "TR" },
+          TM: { name: "Timiș", code: "TM" },
+          TL: { name: "Tulcea", code: "TL" },
+          VS: { name: "Vaslui", code: "VS" },
+          VL: { name: "Vâlcea", code: "VL" },
+          VN: { name: "Vrancea", code: "VN" },
+        };
+
+        const tooltip = document.getElementById("tooltip");
+        const svg = wrapper.querySelector("svg");
+        if (!svg) return;
+
+        if (!svg.id) svg.id = "roMap";
+
+        const maxTeachers = Math.max(
+          0,
+          ...Object.values(evpCountyStats).map((c) => (c && c.teachers) || 0)
+        );
+
+        svg.querySelectorAll("path[id^='RO']").forEach(function (path) {
+          const rawId = path.id;
+          const countyCode = rawId.replace("RO", "");
+          const data = countiesData[countyCode];
+          if (!data) return;
+
+          const county = evpCountyStats[countyCode] || { teachers: 0, total_exp: 0 };
+          const teachers = county.teachers || 0;
+
+          let color = "#FFFBF7";
+          if (teachers === maxTeachers && teachers > 0) color = "#497F90";
+          else if (teachers >= 10) color = "#AAC8CE";
+          else if (teachers >= 6) color = "#CBE1E6";
+          else if (teachers >= 1) color = "#DAEFF4";
+
+          path.classList.add("county");
+          path.style.fill = color;
+
+          const bbox = path.getBBox();
+          const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+          text.setAttribute("x", bbox.x + bbox.width / 2);
+          text.setAttribute("y", bbox.y + bbox.height / 2);
+          text.setAttribute("text-anchor", "middle");
+          text.setAttribute("font-size", "10");
+          text.setAttribute("font-weight", "900");
+          text.setAttribute("font-family", "Inter, sans-serif");
+          text.setAttribute("fill", "#111");
+          text.setAttribute("stroke", "#ffffff");
+          text.setAttribute("stroke-width", "2");
+          text.setAttribute("paint-order", "stroke");
+          text.setAttribute("pointer-events", "none");
+          text.textContent = countyCode;
+          svg.appendChild(text);
+
+          path.addEventListener("mouseenter", function () {
+            tooltip.innerHTML =
+              "<strong>" +
+              data.name +
+              " (" +
+              data.code +
+              ")</strong><br>Profesori EVP: <strong>" +
+              teachers +
+              "</strong><br>Experiență totală: <strong>" +
+              (county.total_exp || 0) +
+              " insigne</strong>";
+            tooltip.style.display = "block";
+          });
+
+          path.addEventListener("mousemove", function (e) {
+            const rect = wrapper.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            tooltip.style.left = x + 15 + "px";
+            tooltip.style.top = y - 20 + "px";
+          });
+
+          path.addEventListener("mouseleave", function () {
+            tooltip.style.display = "none";
+          });
+        });
+      });
+    </script>
+  </body>
+</html>
