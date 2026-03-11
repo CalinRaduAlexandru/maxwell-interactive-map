@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Maxwell Romania Map</title>
     <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Alexandria:wght@400;700;900&display=swap"
       rel="stylesheet"
     />
     <style>
@@ -13,8 +13,8 @@
       body {
         margin: 0;
         padding: 0;
-        background: #f6f7fb;
-        font-family: "Inter", sans-serif;
+        background: linear-gradient(180deg, #f4f9ff 0%, #f8f5ff 55%, #fff7ef 100%);
+        font-family: "Alexandria", sans-serif;
       }
 
       .ro-map-wrapper {
@@ -35,26 +35,562 @@
         fill: #fffef6;
         stroke: #1f2937;
         stroke-width: 1;
-        transition: 0.25s ease;
+        transition:
+          fill 0.25s ease,
+          transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+          filter 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+        transform-box: fill-box;
+        transform-origin: center;
         cursor: pointer;
       }
 
       .county:hover {
         fill: #c7e0ff;
+        transform: translateY(-3px) scale(1.055);
+        filter: brightness(1.18) saturate(1.12) drop-shadow(0 8px 14px rgba(26, 42, 82, 0.25));
       }
 
-      .ro-tooltip {
-        position: absolute;
-        background: #ffffff;
-        padding: 14px 18px;
-        border-radius: 12px;
+      .county.is-selected {
+        transform: translateY(-3px) scale(1.055);
+        filter: brightness(1.18) saturate(1.12) drop-shadow(0 8px 14px rgba(26, 42, 82, 0.25));
+      }
+
+      .county.county-disabled {
+        fill: #fffbf7 !important;
+        cursor: not-allowed;
+        transform: none !important;
+        filter: none !important;
+      }
+
+      .county.county-disabled:hover {
+        fill: #fffbf7 !important;
+        transform: none !important;
+        filter: none !important;
+      }
+
+      .county-modal {
+        position: fixed;
+        width: 560px;
+        max-width: calc(100vw - 16px);
+        max-height: calc(100vh - 16px);
+        overflow: auto;
+        background: #fffdfa;
+        border: 1px solid #e4dde8;
+        border-radius: 14px;
         box-shadow: 0 20px 45px rgba(0, 0, 0, 0.18);
-        font-size: 14px;
-        line-height: 1.4;
-        display: none;
         z-index: 9999;
+        display: none;
+        opacity: 0;
+        transform: translateY(12px) scale(0.92);
+        transform-origin: center center;
+        transition:
+          opacity 0.26s cubic-bezier(0.22, 1, 0.36, 1),
+          transform 0.26s cubic-bezier(0.22, 1, 0.36, 1);
         pointer-events: none;
+      }
+
+      .county-modal.is-open {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+        pointer-events: auto;
+      }
+
+      .county-modal-content {
+        padding: 16px 12px 12px;
+        display: flex;
+        flex-direction: row;
+        align-items: stretch;
+        gap: 10px;
+      }
+
+      .modal-close {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        width: 26px;
+        height: 26px;
+        border: 0;
+        border-radius: 999px;
+        background: #ede7f6;
+        color: #43324d;
+        font-size: 16px;
+        line-height: 1;
+        cursor: pointer;
+      }
+
+      .modal-close:hover {
+        background: #e3daf0;
+      }
+
+      .ambassador-row {
+        text-align: center;
+        padding: 32px 8px 132px;
+        width: 40%;
+        min-width: 0;
+        position: relative;
+      }
+
+      .avatar-wrap {
+        position: relative;
+        width: 125px;
+        margin: 0 auto 16px;
+      }
+
+      .avatar-photo {
+        width: 125px;
+        height: 125px;
+        margin: 0;
+        border-radius: 12px;
+        border: 2px solid #d7d9ee;
+        object-fit: contain;
+        background: linear-gradient(145deg, #d9e8ff, #f0e9ff);
+      }
+
+      .ambassador-name {
+        margin: 2px 0 0;
+        font-size: 13px;
+        font-weight: 700;
+        color: #64748b;
+        letter-spacing: 0.01em;
+      }
+
+      .ambassador-tag {
+        position: absolute;
+        left: 50%;
+        bottom: -10px;
+        transform: translateX(-50%);
+        background: #ffffff;
+        border: 2px solid #d8d2e6;
+        border-radius: 999px;
+        padding: 7px 16px;
+        font-size: 16px;
+        font-weight: 500;
+        color: #1f2937;
+        line-height: 1;
+        box-shadow: 0 8px 16px rgba(31, 41, 55, 0.08);
+        z-index: 2;
         white-space: nowrap;
+      }
+
+      .ambassador-tag .last-name {
+        font-weight: 900;
+        color: #1f2937;
+      }
+
+      .ambassador-desc {
+        margin: 6px 0 0;
+        font-size: 13px;
+        color: #475569;
+        line-height: 1.4;
+        max-width: 95%;
+        margin-left: auto;
+        margin-right: auto;
+      }
+
+      .ambassador-brand {
+        position: absolute;
+        left: 50%;
+        bottom: 10px;
+        transform: translateX(-50%);
+        width: 72%;
+        max-width: 180px;
+        display: block;
+        margin: 0;
+        height: auto;
+        object-fit: contain;
+      }
+
+      .projects-row {
+        width: 60%;
+        min-width: 0;
+        padding-top: 16px;
+        padding-bottom: 16px;
+        padding-left: 12px;
+        border-left: 1px solid #eadff1;
+      }
+
+      .projects-title {
+        margin: 4px 0 16px;
+        text-align: center;
+        font-size: 13px;
+        font-weight: 900;
+        color: #334155;
+        text-transform: uppercase;
+        letter-spacing: 0.02em;
+      }
+
+      .project-item {
+        border: 1px solid #ebdfcf;
+        border-radius: 10px;
+        padding: 8px;
+        margin-bottom: 8px;
+        background: #fff8f0;
+        transition:
+          transform 0.22s ease,
+          filter 0.22s ease,
+          box-shadow 0.22s ease;
+      }
+
+      @media (max-width: 720px) {
+        .county-modal {
+          width: min(420px, calc(100vw - 16px));
+        }
+        .county-modal-content {
+          flex-direction: column;
+          gap: 0;
+        }
+        .ambassador-row,
+        .projects-row {
+          width: 100%;
+        }
+        .projects-row {
+          border-left: 0;
+          border-top: 1px solid #eadff1;
+          margin-top: 10px;
+          padding-left: 0;
+          padding-top: 10px;
+        }
+      }
+
+      .project-item:nth-child(2) {
+        background: #f7efef;
+        border-color: #e7dbdb;
+      }
+
+      .project-item:nth-child(3) {
+        background: #f8f1ea;
+        border-color: #e9ddcf;
+      }
+
+      .project-item:nth-child(4) {
+        background: #f8f5ea;
+        border-color: #eae2c7;
+      }
+
+      .project-item h4 {
+        margin: 0 0 4px;
+        font-size: 13px;
+        font-weight: 800;
+        color: #1f2937;
+      }
+
+      .project-item p {
+        margin: 0 0 8px;
+        font-size: 12px;
+        color: #475569;
+        line-height: 1.4;
+      }
+
+      .project-pill {
+        border: 0;
+        border-radius: 999px;
+        padding: 5px 10px;
+        background: #294f5d;
+        color: #fff;
+        font-size: 11px;
+        font-weight: 700;
+        display: inline-block;
+        text-decoration: none;
+        cursor: pointer;
+        transition:
+          transform 0.18s ease,
+          filter 0.18s ease,
+          box-shadow 0.18s ease;
+      }
+
+      .project-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+
+      .project-owner-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        border-radius: 999px;
+        padding: 5px 10px;
+        background: #ffffff;
+        border: 1px solid #e3dced;
+        color: #334155;
+        font-size: 11px;
+        font-weight: 700;
+        white-space: nowrap;
+      }
+
+      .project-item:has(.project-pill:hover),
+      .project-item:has(.project-pill:focus-visible) {
+        transform: translateY(-3px) scale(1.015);
+        filter: brightness(1.04);
+        box-shadow: 0 14px 24px rgba(44, 62, 80, 0.12);
+      }
+
+      .mobile-accordion {
+        display: none;
+      }
+
+      @media (max-width: 785px) {
+        .ro-map-wrapper,
+        #county-modal {
+          display: none !important;
+        }
+
+        .mobile-accordion {
+          display: block;
+          padding: 14px 12px 24px;
+        }
+
+        .mobile-legend {
+          margin: 2px 2px 12px;
+          padding: 10px 12px;
+          border: 1px solid #d9d0e7;
+          border-radius: 14px;
+          background: #fffdfa;
+          box-shadow: 0 8px 18px rgba(42, 65, 76, 0.08);
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 8px;
+        }
+
+        .mobile-legend .legend-logo {
+          width: 180px;
+          height: 52px;
+          padding-top: 16px;
+          padding-bottom: 16px;
+          object-fit: cover;
+          object-position: center;
+          flex: 0 0 auto;
+        }
+
+        .mobile-legend .legend-badge {
+          font-size: 11px;
+          font-weight: 800;
+          border-radius: 999px;
+          padding: 4px 10px;
+          background: #300372;
+          color: #fff;
+        }
+
+        details {
+          border: 1px solid #d9d0e7;
+          border-radius: 12px;
+          background: #fff;
+          margin: 0 2px 10px;
+          overflow: hidden;
+        }
+
+        summary {
+          list-style: none;
+          cursor: pointer;
+          padding: 11px 12px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 10px;
+          font-size: 14px;
+          font-weight: 700;
+        }
+
+        summary::-webkit-details-marker {
+          display: none;
+        }
+
+        .summary-left {
+          display: inline-flex;
+          align-items: center;
+          gap: 10px;
+          min-width: 0;
+        }
+
+        .summary-code {
+          font-size: 11px;
+          font-weight: 800;
+          border-radius: 999px;
+          padding: 3px 8px;
+          background: #300372;
+          color: #fff;
+          white-space: nowrap;
+        }
+
+        .summary-name {
+          min-width: 0;
+          color: #1f2937;
+        }
+
+        .summary-status {
+          font-size: 11px;
+          font-weight: 700;
+          border-radius: 999px;
+          padding: 4px 8px;
+          white-space: nowrap;
+          background: #efe7fb;
+          color: #300372;
+        }
+
+        .summary-right {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          flex-wrap: wrap;
+          justify-content: flex-end;
+        }
+
+        .summary-pill {
+          font-size: 11px;
+          font-weight: 700;
+          border-radius: 999px;
+          padding: 4px 8px;
+          white-space: nowrap;
+          line-height: 1;
+        }
+
+        .summary-pill.ambassador {
+          background: #ffffff;
+          border: 1px solid #d8d2e6;
+          color: #334155;
+        }
+
+        .summary-pill.projects {
+          background: #300372;
+          border: 1px solid #300372;
+          color: #ffffff;
+        }
+
+        .accordion-body {
+          max-height: 0;
+          overflow: hidden;
+          opacity: 0;
+          transform: translateY(-6px);
+          padding: 0 12px;
+          border-top: 1px solid transparent;
+          transition:
+            max-height 0.32s ease,
+            opacity 0.24s ease,
+            transform 0.24s ease,
+            padding 0.24s ease,
+            border-top-color 0.24s ease;
+          will-change: max-height, opacity, transform;
+        }
+
+        details.is-open .accordion-body {
+          max-height: 78vh;
+          opacity: 1;
+          transform: translateY(0);
+          padding: 10px 12px 12px;
+          border-top: 1px solid #e6deef;
+        }
+
+        .accordion-section {
+          margin-bottom: 10px;
+          font-size: 12px;
+          color: #334155;
+          line-height: 1.45;
+        }
+
+        .accordion-section h4 {
+          margin: 0 0 6px;
+          font-size: 12px;
+          font-weight: 900;
+          text-transform: uppercase;
+          letter-spacing: 0.02em;
+          color: #3f2f6a;
+        }
+
+        .accordion-project {
+          border: 1px solid #e8dece;
+          border-radius: 10px;
+          background: #fff8f0;
+          padding: 8px;
+          margin-bottom: 8px;
+        }
+
+        .accordion-project h5 {
+          margin: 0 0 4px;
+          font-size: 13px;
+          color: #1f2937;
+        }
+
+        .accordion-project p {
+          margin: 0 0 8px;
+          font-size: 12px;
+          color: #475569;
+        }
+
+        .accordion-amb-grid {
+          display: grid;
+          grid-template-columns: 1fr;
+          gap: 10px;
+          align-items: center;
+        }
+
+        .accordion-amb-left {
+          text-align: center;
+          position: relative;
+          padding-top: 32px;
+          padding-bottom: 50px;
+        }
+
+        .accordion-avatar {
+          width: clamp(194px, 40vw, 270px);
+          height: clamp(194px, 40vw, 270px);
+          border-radius: 12px;
+          border: 2px solid #d7d9ee;
+          background: linear-gradient(145deg, #d9e8ff, #f0e9ff);
+          object-fit: contain;
+          display: block;
+          margin: 0 auto;
+        }
+
+        .accordion-amb-name {
+          position: absolute;
+          left: 50%;
+          top: calc(32px + clamp(194px, 40vw, 270px));
+          transform: translate(-50%, -50%);
+          border-radius: 999px;
+          background: #ffffff;
+          border: 1px solid #d8d2e6;
+          padding: 6px 14px;
+          font-size: 13px;
+          font-weight: 700;
+          color: #334155;
+          white-space: nowrap;
+        }
+
+        .accordion-amb-role {
+          position: absolute;
+          left: 50%;
+          bottom: 0;
+          transform: translateX(-50%);
+          font-size: 11px;
+          font-weight: 900;
+          letter-spacing: 0.03em;
+          text-transform: uppercase;
+          color: #4c3f76;
+          white-space: nowrap;
+        }
+
+        .accordion-amb-right p {
+          margin: 0;
+          max-width: 36ch;
+          line-height: 1.5;
+          padding-bottom: 32px;
+          margin-left: auto;
+          margin-right: auto;
+          text-align: center;
+        }
+
+        .accordion-actions {
+          display: flex;
+          gap: 8px;
+          flex-wrap: wrap;
+        }
+
+        .accordion-actions .project-pill,
+        .accordion-actions .project-owner-pill {
+          font-size: 11px;
+        }
       }
 
       .ro-error {
@@ -71,7 +607,18 @@
   </head>
   <body>
     <div class="ro-map-wrapper" id="map-wrapper"></div>
-    <div id="tooltip" class="ro-tooltip"></div>
+    <div id="county-modal" class="county-modal">
+      <button id="county-modal-close" class="modal-close" type="button" aria-label="Închide">
+        ×
+      </button>
+      <div class="county-modal-content"></div>
+    </div>
+    <main class="mobile-accordion" id="mobile-accordion">
+      <section class="mobile-legend">
+        <img class="legend-logo" src="maxwell-logo.PNG" alt="Maxwell logo" />
+        <span class="legend-badge">Județe Maxwell</span>
+      </section>
+    </main>
 
     <script>
       document.addEventListener("DOMContentLoaded", async function () {
@@ -134,8 +681,14 @@
           VN: { name: "Vrancea", code: "VN" },
         };
 
-        const tooltip = document.getElementById("tooltip");
+        const modal = document.getElementById("county-modal");
+        const modalClose = document.getElementById("county-modal-close");
+        const modalContent = modal.querySelector(".county-modal-content");
+        const mobileHost = document.getElementById("mobile-accordion");
         const svg = wrapper.querySelector("svg");
+        let activePath = null;
+        let closeTimer = null;
+        let switchTimer = null;
         if (!svg) return;
 
         if (!svg.id) svg.id = "roMap";
@@ -144,6 +697,442 @@
           0,
           ...Object.values(evpCountyStats).map((c) => (c && c.teachers) || 0)
         );
+
+        const countyOrder = Object.keys(countiesData).slice().sort();
+        const firstNames = [
+          "Ana",
+          "Andrei",
+          "Bianca",
+          "Călin",
+          "Daria",
+          "Denis",
+          "Elena",
+          "Florin",
+          "Gabriela",
+          "Horia",
+          "Ioana",
+          "Iulian",
+          "Karina",
+          "Liviu",
+          "Mara",
+          "Mihai",
+          "Nadia",
+          "Radu",
+        ];
+        const lastNames = [
+          "Popescu",
+          "Ionescu",
+          "Dumitrescu",
+          "Marin",
+          "Preda",
+          "Stan",
+          "Munteanu",
+          "Enache",
+          "Vasilescu",
+          "Georgescu",
+          "Rusu",
+          "Matei",
+          "Ilie",
+          "Nistor",
+        ];
+
+        const activeCountyCodes = Object.keys(countiesData);
+        const disabledCount = Math.round(activeCountyCodes.length * 0.6);
+        // Deterministic selection: same counties stay disabled on every refresh.
+        const sortedByStableScore = activeCountyCodes
+          .slice()
+          .sort(function (a, b) {
+            const scoreA = a.charCodeAt(0) * 31 + a.charCodeAt(1);
+            const scoreB = b.charCodeAt(0) * 31 + b.charCodeAt(1);
+            return scoreA - scoreB;
+          });
+        const disabledCounties = new Set(sortedByStableScore.slice(0, disabledCount));
+        // Force Bihor as active Maxwell county.
+        disabledCounties.delete("BH");
+
+        // Edit this object manually: project names/descriptions per active county.
+        // Fluctuation 1..3 projects is already modeled by array length.
+        const projectsByCounty = {
+          BH: {
+            ambassador: { firstName: "Andrei", lastName: "Ionescu", avatar: "avatar-person-transparent.svg" },
+            projects: [
+              { title: "Clubul Virtuților Bihor", description: "Ateliere pilot pentru elevi și profesori în județul Bihor." },
+              { title: "Mentorat Maxwell Bihor", description: "Program local de mentorat pentru cadre didactice debutante." },
+              { title: "Părinți în Dialog", description: "Întâlniri lunare pentru dezvoltarea culturii caracterului acasă." },
+            ],
+          },
+          IS: {
+            ambassador: { firstName: "Andreea", lastName: "Popescu", avatar: "avatar-female-transparent.svg" },
+            projects: [
+              { title: "Laboratorul de Caracter Iași", description: "Activități tematice pentru dezvoltarea virtuților în școli." },
+              { title: "Maxwell pentru Profesori Iași", description: "Sesiuni practice de integrare a virtuților la clasă." },
+            ],
+          },
+          MM: {
+            ambassador: { firstName: "Andrei", lastName: "Ionescu", avatar: "avatar-person-transparent.svg" },
+            projects: [{ title: "Maramureș Character Camp", description: "Tabără educațională pentru elevi, cu exerciții de caracter." }],
+          },
+          MH: {
+            ambassador: { firstName: "Andrei", lastName: "Ionescu", avatar: "avatar-person-transparent.svg" },
+            projects: [
+              { title: "Comunități Curajoase MH", description: "Inițiative locale în parteneriat școală-familie-comunitate." },
+              { title: "Calendarul Virtuților", description: "Plan anual cu micro-activități și reflecții săptămânale." },
+            ],
+          },
+          MS: {
+            ambassador: { firstName: "Andrei", lastName: "Ionescu", avatar: "avatar-person-transparent.svg" },
+            projects: [
+              { title: "Mureș School Pilot", description: "Implementare pilot Maxwell în clase gimnaziale." },
+              { title: "Formare Diriginți", description: "Modul intensiv pentru diriginți și consilieri școlari." },
+              { title: "Povești cu Impact", description: "Cerc de lectură și reflecție pe tema caracterului." },
+            ],
+          },
+          NT: { ambassador: { firstName: "Andreea", lastName: "Popescu", avatar: "avatar-female-transparent.svg" }, projects: [{ title: "Neamț EduCare", description: "Program local pentru climat pozitiv și leadership moral." }] },
+          OT: { ambassador: { firstName: "Andrei", lastName: "Ionescu", avatar: "avatar-person-transparent.svg" }, projects: [{ title: "Atelierul de Virtuți Olt", description: "Workshop-uri recurente pentru elevi și profesori." }, { title: "Voluntariat cu Sens", description: "Proiect de implicare civică ghidat de valori." }] },
+          PH: { ambassador: { firstName: "Andreea", lastName: "Popescu", avatar: "avatar-female-transparent.svg" }, projects: [{ title: "Prahova Character Hub", description: "Rețea de școli colaborative pentru educație prin virtuți." }, { title: "Comunități de Practică", description: "Întâlniri lunare între ambasadori și profesori." }, { title: "Seri de Dialog", description: "Evenimente locale cu părinți și elevi pe teme de caracter." }] },
+          SJ: { ambassador: { firstName: "Andrei", lastName: "Ionescu", avatar: "avatar-person-transparent.svg" }, projects: [{ title: "Sălaj Start", description: "Pachet introductiv Maxwell pentru școli partenere." }] },
+          SM: { ambassador: { firstName: "Andrei", lastName: "Ionescu", avatar: "avatar-person-transparent.svg" }, projects: [{ title: "Satu Mare Next", description: "Intervenții tematice pentru formarea obiceiurilor pozitive." }, { title: "Ora de Caracter", description: "Resurse săptămânale pentru clasele primare." }] },
+          SB: { ambassador: { firstName: "Andrei", lastName: "Ionescu", avatar: "avatar-person-transparent.svg" }, projects: [{ title: "Sibiu Values Lab", description: "Activități interdisciplinare centrate pe virtuți." }, { title: "Cadre în Formare", description: "Training practic pentru implementare la clasă." }, { title: "Școală și Comunitate", description: "Micro-proiecte colaborative în comunitatea locală." }] },
+          SV: { ambassador: { firstName: "Andrei", lastName: "Ionescu", avatar: "avatar-person-transparent.svg" }, projects: [{ title: "Suceava Character Sprint", description: "Intervenții scurte și intense cu rezultate măsurabile." }, { title: "Puntea Profesor-Părinte", description: "Instrumente de comunicare și rutină comună." }] },
+          TR: { ambassador: { firstName: "Andrei", lastName: "Ionescu", avatar: "avatar-person-transparent.svg" }, projects: [{ title: "Teleorman Inspire", description: "Program de mentorat pentru ambasadori locali." }] },
+          TM: { ambassador: { firstName: "Andrei", lastName: "Ionescu", avatar: "avatar-person-transparent.svg" }, projects: [{ title: "Timiș Leadership", description: "Cultivarea leadershipului cu caracter în școli." }, { title: "Maxwell in Action", description: "Set de provocări practice pentru clasele V-VIII." }] },
+          TL: { ambassador: { firstName: "Andreea", lastName: "Popescu", avatar: "avatar-female-transparent.svg" }, projects: [{ title: "Tulcea Mindset", description: "Activități pentru reziliență și responsabilitate personală." }, { title: "Proiecte de Impact", description: "Inițiative locale ghidate de ambasadori." }, { title: "Școală cu Sens", description: "Plan de transformare culturală la nivel de școală." }] },
+          VS: { ambassador: { firstName: "Andrei", lastName: "Ionescu", avatar: "avatar-person-transparent.svg" }, projects: [{ title: "Vaslui Growth", description: "Program de dezvoltare pentru profesori și elevi." }, { title: "Virtuți la Clasă", description: "Materiale și ritualuri zilnice pentru comportamente pozitive." }] },
+          VL: { ambassador: { firstName: "Andrei", lastName: "Ionescu", avatar: "avatar-person-transparent.svg" }, projects: [{ title: "Vâlcea Character Steps", description: "Implementare graduală în școli partenere." }] },
+          VN: { ambassador: { firstName: "Andreea", lastName: "Popescu", avatar: "avatar-female-transparent.svg" }, projects: [{ title: "Vrancea Future", description: "Model local de educație prin virtuți și colaborare." }, { title: "Ambasadori Junior", description: "Implicarea elevilor în inițiative de caracter." }] },
+        };
+
+        function getModalData(data, countyCode) {
+          const countyConfig = projectsByCounty[countyCode] || {};
+          const ambassadorConfig = countyConfig.ambassador || {};
+          const isFemale = ambassadorConfig.avatar
+            ? ambassadorConfig.avatar.indexOf("female") >= 0
+            : countyCode.charCodeAt(0) % 2 === 0;
+          const countyRank = Math.max(0, countyOrder.indexOf(countyCode));
+
+          function getOwnerName(projectIndex) {
+            const comboIndex = countyRank * 3 + projectIndex;
+            const first = firstNames[comboIndex % firstNames.length];
+            const last = lastNames[Math.floor(comboIndex / firstNames.length) % lastNames.length];
+            return first + " " + last;
+          }
+
+          return {
+            ambassador: {
+              name: "Ambasador județul " + data.name,
+              avatar:
+                ambassadorConfig.avatar ||
+                (isFemale
+                  ? "avatar-female-transparent.svg"
+                  : "avatar-person-transparent.svg"),
+              firstName: ambassadorConfig.firstName || (isFemale ? "Andreea" : "Andrei"),
+              lastName: ambassadorConfig.lastName || (isFemale ? "Popescu" : "Ionescu"),
+              description:
+                "Coordonator local pentru județul " +
+                data.name +
+                ", implicat în inițiative Maxwell și dezvoltarea comunității.",
+            },
+            projects: (countyConfig.projects || []).map(function (project, projectIndex) {
+              return {
+                title: project.title,
+                description: project.description,
+                ownerName: getOwnerName(projectIndex),
+              };
+            }),
+          };
+        }
+
+        function hideModal() {
+          if (switchTimer) {
+            clearTimeout(switchTimer);
+            switchTimer = null;
+          }
+          if (closeTimer) {
+            clearTimeout(closeTimer);
+            closeTimer = null;
+          }
+          modal.classList.remove("is-open");
+          closeTimer = window.setTimeout(function () {
+            modal.style.display = "none";
+            if (activePath) activePath.classList.remove("is-selected");
+            activePath = null;
+            closeTimer = null;
+          }, 260);
+        }
+
+        function positionModal(path) {
+          const bbox = path.getBBox();
+          const svgRect = svg.getBoundingClientRect();
+          const vb = svg.viewBox.baseVal;
+          const scaleX = svgRect.width / vb.width;
+          const scaleY = svgRect.height / vb.height;
+
+          const countyLeft = (bbox.x - vb.x) * scaleX + svgRect.left;
+          const countyRight = (bbox.x + bbox.width - vb.x) * scaleX + svgRect.left;
+          const countyCenterY = (bbox.y + bbox.height / 2 - vb.y) * scaleY + svgRect.top;
+
+          // Use layout size (not transformed size) so clamping is correct before open animation.
+          const modalWidth = modal.offsetWidth;
+          const modalHeight = modal.offsetHeight;
+          const gap = 10;
+          const rightX = countyRight + gap;
+          const leftX = countyLeft - modalWidth - gap;
+
+          let x;
+          if (rightX + modalWidth <= window.innerWidth - 8) {
+            x = rightX;
+          } else if (leftX >= 8) {
+            x = leftX;
+          } else {
+            x = Math.max(8, Math.min(rightX, window.innerWidth - modalWidth - 8));
+          }
+
+          let y = countyCenterY - modalHeight / 2;
+
+          const maxY = window.innerHeight - modalHeight - 8;
+
+          const maxX = window.innerWidth - modalWidth - 8;
+          x = Math.max(8, Math.min(x, maxX));
+          y = Math.max(8, Math.min(y, maxY));
+
+          modal.style.left = x + "px";
+          modal.style.top = y + "px";
+          modal.style.transformOrigin =
+            countyCenterY < window.innerHeight / 2 ? "top center" : "bottom center";
+        }
+
+        function renderModalContent(modalData) {
+          modalContent.innerHTML =
+            '<div class="ambassador-row">' +
+            '<div class="avatar-wrap">' +
+            '<img class="avatar-photo" src="' +
+            modalData.ambassador.avatar +
+            '" alt="Profil ambasador" />' +
+            '<div class="ambassador-tag"><span>' +
+            modalData.ambassador.firstName +
+            '</span> <span class="last-name">' +
+            modalData.ambassador.lastName +
+            "</span></div>" +
+            "</div>" +
+            '<h3 class="ambassador-name">' +
+            modalData.ambassador.name +
+            "</h3>" +
+            '<p class="ambassador-desc">' +
+            modalData.ambassador.description +
+            "</p>" +
+            '<img class="ambassador-brand" src="maxwell-logo.png" alt="Maxwell logo" />' +
+            "</div>" +
+            '<div class="projects-row">' +
+            '<h4 class="projects-title">Proiecte în acest județ</h4>' +
+            modalData.projects
+              .map(function (project) {
+                return (
+                  '<div class="project-item">' +
+                  "<h4>" +
+                  project.title +
+                  "</h4>" +
+                  "<p>" +
+                  project.description +
+                  "</p>" +
+                  '<div class="project-actions">' +
+                  '<a class="project-pill" href="https://google.ro" target="_blank" rel="noopener noreferrer">vezi detalii</a>' +
+                  '<span class="project-owner-pill">👤 ' +
+                  project.ownerName +
+                  "</span>" +
+                  "</div>" +
+                  "</div>"
+                );
+              })
+              .join("") +
+            "</div>";
+        }
+
+        function showModal(path, data, countyCode) {
+          const modalData = getModalData(data, countyCode);
+          const isSwitching =
+            modal.style.display === "block" &&
+            modal.classList.contains("is-open") &&
+            activePath &&
+            activePath !== path;
+
+          if (switchTimer) {
+            clearTimeout(switchTimer);
+            switchTimer = null;
+          }
+
+          if (activePath) activePath.classList.remove("is-selected");
+          activePath = path;
+          activePath.classList.add("is-selected");
+          if (closeTimer) {
+            clearTimeout(closeTimer);
+            closeTimer = null;
+          }
+
+          if (isSwitching) {
+            modal.classList.remove("is-open");
+            switchTimer = window.setTimeout(function () {
+              renderModalContent(modalData);
+              positionModal(path);
+              window.requestAnimationFrame(function () {
+                modal.classList.add("is-open");
+              });
+              switchTimer = null;
+            }, 160);
+            return;
+          }
+
+          renderModalContent(modalData);
+          modal.style.display = "block";
+          modal.classList.remove("is-open");
+          positionModal(path);
+          window.requestAnimationFrame(function () {
+            modal.classList.add("is-open");
+          });
+        }
+
+        function renderMobileAccordion() {
+          if (!mobileHost) return;
+          const activeCodes = countyOrder.filter(function (code) {
+            return !disabledCounties.has(code);
+          });
+
+          activeCodes.forEach(function (countyCode) {
+            const data = countiesData[countyCode];
+            if (!data) return;
+            const modalData = getModalData(data, countyCode);
+
+            const projectsHtml = modalData.projects
+              .map(function (project) {
+                return (
+                  '<article class="accordion-project">' +
+                  "<h5>" +
+                  project.title +
+                  "</h5>" +
+                  "<p>" +
+                  project.description +
+                  "</p>" +
+                  '<div class="accordion-actions">' +
+                  '<a class="project-pill" href="https://google.ro" target="_blank" rel="noopener noreferrer">vezi detalii</a>' +
+                  '<span class="project-owner-pill">👤 ' +
+                  project.ownerName +
+                  "</span>" +
+                  "</div>" +
+                  "</article>"
+                );
+              })
+              .join("");
+
+            const item = document.createElement("details");
+            item.innerHTML =
+              "<summary>" +
+              '<span class="summary-left">' +
+              '<span class="summary-code">' +
+              countyCode +
+              "</span>" +
+              '<span class="summary-name">' +
+              data.name +
+              "</span>" +
+              "</span>" +
+              '<span class="summary-right">' +
+              '<span class="summary-pill ambassador">👤 ' +
+              modalData.ambassador.firstName +
+              " " +
+              modalData.ambassador.lastName +
+              "</span>" +
+              '<span class="summary-pill projects">' +
+              modalData.projects.length +
+              " proiecte</span>" +
+              "</span>" +
+              "</summary>" +
+              '<div class="accordion-body">' +
+              '<section class="accordion-section">' +
+              '<div class="accordion-amb-grid">' +
+              '<div class="accordion-amb-left">' +
+              '<img class="accordion-avatar" src="' +
+              modalData.ambassador.avatar +
+              '" alt="Profil ambasador" />' +
+              '<span class="accordion-amb-name">' +
+              modalData.ambassador.firstName +
+              " " +
+              modalData.ambassador.lastName +
+              "</span>" +
+              '<div class="accordion-amb-role">' +
+              modalData.ambassador.name +
+              "</div>" +
+              "</div>" +
+              '<div class="accordion-amb-right">' +
+              "<p>" +
+              modalData.ambassador.description +
+              "</p>" +
+              "</div>" +
+              "</div>" +
+              "</section>" +
+              '<section class="accordion-section">' +
+              "<h4>Proiecte în acest județ</h4>" +
+              projectsHtml +
+              "</section>" +
+              "</div>";
+            mobileHost.appendChild(item);
+          });
+
+          const detailItems = Array.from(mobileHost.querySelectorAll("details"));
+          const DURATION_MS = 320;
+
+          function animateOpen(item) {
+            const body = item.querySelector(".accordion-body");
+            if (!body || item.dataset.animating === "1") return;
+            item.dataset.animating = "1";
+            item.open = true;
+            body.style.maxHeight = "0px";
+            body.style.opacity = "0";
+            body.style.transform = "translateY(-6px)";
+            requestAnimationFrame(function () {
+              body.style.maxHeight = body.scrollHeight + "px";
+              body.style.opacity = "1";
+              body.style.transform = "translateY(0)";
+            });
+            window.setTimeout(function () {
+              body.style.maxHeight = "none";
+              item.classList.add("is-open");
+              item.dataset.animating = "0";
+            }, DURATION_MS);
+          }
+
+          function animateClose(item) {
+            const body = item.querySelector(".accordion-body");
+            if (!body || item.dataset.animating === "1") return;
+            item.dataset.animating = "1";
+            item.classList.remove("is-open");
+            const currentHeight = body.scrollHeight;
+            body.style.maxHeight = currentHeight + "px";
+            requestAnimationFrame(function () {
+              body.style.maxHeight = "0px";
+              body.style.opacity = "0";
+              body.style.transform = "translateY(-6px)";
+            });
+            window.setTimeout(function () {
+              item.open = false;
+              item.dataset.animating = "0";
+            }, DURATION_MS);
+          }
+
+          detailItems.forEach(function (item) {
+            const summary = item.querySelector("summary");
+            if (!summary) return;
+            summary.addEventListener("click", function (event) {
+              event.preventDefault();
+              const isOpen = item.open && item.classList.contains("is-open");
+              detailItems.forEach(function (other) {
+                if (other !== item && other.open) animateClose(other);
+              });
+              if (isOpen) {
+                animateClose(item);
+              } else {
+                animateOpen(item);
+              }
+            });
+          });
+        }
 
         svg.querySelectorAll("path[id^='RO']").forEach(function (path) {
           const rawId = path.id;
@@ -161,7 +1150,15 @@
           else if (teachers >= 1) color = "#DAEFF4";
 
           path.classList.add("county");
-          path.style.fill = color;
+          const isDisabled = disabledCounties.has(countyCode);
+          if (isDisabled) {
+            path.classList.add("county-disabled");
+            path.style.fill = "#fffbf7";
+            path.style.stroke = "#1f2937";
+          } else {
+            path.style.fill = "#300372";
+            path.style.stroke = "#ffffff";
+          }
 
           const bbox = path.getBBox();
           const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
@@ -170,40 +1167,45 @@
           text.setAttribute("text-anchor", "middle");
           text.setAttribute("font-size", "10");
           text.setAttribute("font-weight", "900");
-          text.setAttribute("font-family", "Inter, sans-serif");
-          text.setAttribute("fill", "#111");
-          text.setAttribute("stroke", "#ffffff");
+          text.setAttribute("font-family", "Alexandria, sans-serif");
+          text.setAttribute("fill", isDisabled ? "#111" : "#ffffff");
+          text.setAttribute("stroke", isDisabled ? "#ffffff" : "#300372");
           text.setAttribute("stroke-width", "2");
           text.setAttribute("paint-order", "stroke");
           text.setAttribute("pointer-events", "none");
           text.textContent = countyCode;
           svg.appendChild(text);
 
-          path.addEventListener("mouseenter", function () {
-            tooltip.innerHTML =
-              "<strong>" +
-              data.name +
-              " (" +
-              data.code +
-              ")</strong><br>Profesori EVP: <strong>" +
-              teachers +
-              "</strong><br>Experiență totală: <strong>" +
-              (county.total_exp || 0) +
-              " insigne</strong>";
-            tooltip.style.display = "block";
-          });
+          if (!isDisabled) {
+            path.addEventListener("click", function (event) {
+              event.stopPropagation();
+              if (activePath === path && modal.style.display === "block") {
+                hideModal();
+                return;
+              }
+              showModal(path, data, countyCode);
+            });
+          }
+        });
 
-          path.addEventListener("mousemove", function (e) {
-            const rect = wrapper.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
-            tooltip.style.left = x + 15 + "px";
-            tooltip.style.top = y - 20 + "px";
-          });
+        renderMobileAccordion();
 
-          path.addEventListener("mouseleave", function () {
-            tooltip.style.display = "none";
-          });
+        document.addEventListener("click", function () {
+          hideModal();
+        });
+
+        modal.addEventListener("click", function (event) {
+          event.stopPropagation();
+        });
+
+        modalClose.addEventListener("click", function () {
+          hideModal();
+        });
+
+        window.addEventListener("resize", function () {
+          if (activePath && modal.style.display === "block") {
+            positionModal(activePath);
+          }
         });
       });
     </script>

@@ -41,12 +41,16 @@
 
       @media (max-width: 785px) {
         .desktop-map {
-          display: none;
+          display: block;
+          height: auto;
+        }
+
+        .desktop-map iframe {
+          height: 100vh;
         }
 
         .mobile-accordion {
-          display: block;
-          padding: 14px 12px 24px;
+          display: none !important;
         }
 
         .mobile-legend {
